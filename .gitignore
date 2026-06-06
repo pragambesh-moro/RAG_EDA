@@ -5,6 +5,8 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 .venv/
+parsed_markdowns/
+synopsys_pdfs/
 venv/
 env/
 dist/
