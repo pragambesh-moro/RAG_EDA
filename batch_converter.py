@@ -51,6 +51,11 @@ def batch_convert_manuals(pdf_directory: str, output_directory: str, num_threads
     os.makedirs(output_directory, exist_ok=True)
     
     for pdf in pdf_paths:
+        out_path = Path(output_directory) / f"{pdf.stem}.md"
+        if out_path.exists():
+            print(f"Skipping {pdf.name}... (Markdown already exists)")
+            continue
+
         print(f"Parsing {pdf.name}...")
         total_pages = get_pdf_page_count(str(pdf))
         print(f"Total pages detected: {total_pages}")
