@@ -1,11 +1,74 @@
+# Python
 __pycache__/
 *.py[cod]
 *.egg-info/
 .mypy_cache/
 .pytest_cache/
 .ruff_cache/
+
+# Virtual Environments
 .venv/
 venv/
 env/
+
+# Build Artifacts
 dist/
 build/
+
+# ─────────────────────────────────────────────
+# Project-Specific: Large Data Files
+# ─────────────────────────────────────────────
+
+# Phase 1: Raw PDF manuals (proprietary, large)
+synopsys_pdfs/
+
+# Phase 1: Parsed Markdown output (reproducible from PDFs)
+parsed_markdown/
+
+# Phase 2: Semantic chunks (reproducible, ~25MB)
+semantic_chunks.jsonl
+
+# Phase 4: Generated SFT dataset (reproducible from chunks)
+dataset.jsonl
+
+# ─────────────────────────────────────────────
+# Project-Specific: Model & Database Artifacts
+# ─────────────────────────────────────────────
+
+# Phase 3: ChromaDB vector store (reproducible from chunks, ~large)
+chroma_db/
+
+# Phase 4: Downloaded base model weights (~14GB)
+deepseek-coder-7b-base/
+
+# Phase 4: QLoRA adapter outputs from HPC training
+qlora-tcl-model/
+
+# ─────────────────────────────────────────────
+# Wheel & Transfer Artifacts
+# ─────────────────────────────────────────────
+
+# Offline wheel downloads for HPC transfer
+hpc_wheels/
+hpc_wheels_test/
+
+# ─────────────────────────────────────────────
+# Logs & Slurm Output Files
+# ─────────────────────────────────────────────
+*.out
+*.err
+*.log
+
+# ─────────────────────────────────────────────
+# Editor & OS Junk
+# ─────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/
+
+##CUSTOM
+hpc.md
+semantic_chunks.jsonl
