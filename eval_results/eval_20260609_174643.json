@@ -1,0 +1,124 @@
+{
+  "metadata": {
+    "timestamp": "20260609_174643",
+    "base_model": "./deepseek-coder-7b-base",
+    "adapters": "./qlora-tcl-model-local",
+    "num_queries": 16,
+    "avg_latency_seconds": 2.342,
+    "total_latency_seconds": 37.465
+  },
+  "results": [
+    {
+      "id": 1,
+      "category": "Floorplan",
+      "instruction": "Create a floorplan with a core utilization of 0.7 and a core offset of 10 microns on all sides.",
+      "response": "floorplan-core_utilization0.7-horizontally_oriented-side1\\-core_offset10",
+      "latency_seconds": 2.478
+    },
+    {
+      "id": 2,
+      "category": "Floorplan",
+      "instruction": "How do I set the aspect ratio of the die to 0.8 during floorplanning?",
+      "response": "create_power_domain-namePD1\\-corners\"BLBR\"-aspect_ratio0.8",
+      "latency_seconds": 1.606
+    },
+    {
+      "id": 3,
+      "category": "Placement",
+      "instruction": "Run coarse placement while ignoring scan chains.",
+      "response": "set_app_options-nameplace.coarse.ignore_scan_chain\\-value{1}icc2_shell>create_power_domainPD1-scanset_app_options-nameplace.coarse.power_domains\\-value{PD1}",
+      "latency_seconds": 4.066
+    },
+    {
+      "id": 4,
+      "category": "Placement",
+      "instruction": "Place all macros first before placing standard cells.",
+      "response": "set_attribute-classboolean\\mv.global.skip_place_via_checktrue",
+      "latency_seconds": 1.379
+    },
+    {
+      "id": 5,
+      "category": "Placement",
+      "instruction": "Fix the placement of a specific cell named 'u_mem_ctrl' so it doesn't move during optimization.",
+      "response": "set_app_options-nameplace.initial_drc_fix\\-value{u_mem_ctrl=1}",
+      "latency_seconds": 1.868
+    },
+    {
+      "id": 6,
+      "category": "CTS",
+      "instruction": "Run clock tree synthesis and target a maximum clock skew of 100 picoseconds.",
+      "response": "compile_ultra-incremental",
+      "latency_seconds": 0.672
+    },
+    {
+      "id": 7,
+      "category": "CTS",
+      "instruction": "Exclude the clock net named 'clk_scan' from clock tree synthesis.",
+      "response": "set_app_options-namects.multisource.enable_dont_touch\\-valuetrueicc2_shell>create_clock-period10-waveform{55}{66}CLOCKSRCNAMESTARTDTEND--------------------------------------------------------------------------------------clk_scan10(RSE)0",
+      "latency_seconds": 4.875
+    },
+    {
+      "id": 8,
+      "category": "Routing",
+      "instruction": "Run global routing and set the maximum number of routing layers to 9.",
+      "response": "set_app_options-nameglobal_routing.congestion_effort\\-valuehighicc2_shell>route_global...",
+      "latency_seconds": 2.232
+    },
+    {
+      "id": 9,
+      "category": "Routing",
+      "instruction": "Run detail routing and then check for DRC violations.",
+      "response": "set_app_options\\-nameroute.detail.check_drc_during_linking-valuetrue",
+      "latency_seconds": 1.935
+    },
+    {
+      "id": 10,
+      "category": "Timing",
+      "instruction": "Report the worst negative slack and the total negative slack across all paths.",
+      "response": "TOTAL-SLACK=0.125",
+      "latency_seconds": 0.935
+    },
+    {
+      "id": 11,
+      "category": "Timing",
+      "instruction": "Create a clock constraint with a period of 2 nanoseconds on the port named 'clk'.",
+      "response": "set_clock_latency-rise0.5CLKrisedetailreport(CPT-47)---------------------------------------------------------------Clock'CLK'(period=2.00ns,Ġwidth=1bit)LatencyInformation:'rise'at'3.0000ns','fall'at'-0.5000ns",
+      "latency_seconds": 5.204
+    },
+    {
+      "id": 12,
+      "category": "Timing",
+      "instruction": "Set a false path between two registers 'reg_a' and 'reg_b'.",
+      "response": "set_attribute-stateglbl_delay10.5",
+      "latency_seconds": 1.056
+    },
+    {
+      "id": 13,
+      "category": "Power",
+      "instruction": "Report the total power consumption of the design broken down by dynamic and leakage power.",
+      "response": "TotalPower105.49236pts-ndmTotalPower18.76000ptsLeakagePower16.26764ptsDynamicPower86.42236pts",
+      "latency_seconds": 3.898
+    },
+    {
+      "id": 14,
+      "category": "Power",
+      "instruction": "Insert power switches for the power domain named 'PD_CPU'.",
+      "response": "create_voltage_area-power_domainPD_CPU\\-supply{SS1}{SS2}",
+      "latency_seconds": 1.782
+    },
+    {
+      "id": 15,
+      "category": "Design Checks",
+      "instruction": "Check the design for any unconnected ports or nets.",
+      "response": "Warning-Multipleinstancesfoundfornet[clk]atport[A][0].",
+      "latency_seconds": 1.558
+    },
+    {
+      "id": 16,
+      "category": "Design Checks",
+      "instruction": "Save the current design state to a file called 'after_route.dcp'.",
+      "response": "set_app_options-nameplace_opt.coarse.skip_spare_space-valuetrue",
+      "latency_seconds": 1.919
+    }
+  ]
+}
