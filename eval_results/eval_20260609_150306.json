@@ -1,0 +1,124 @@
+{
+  "metadata": {
+    "timestamp": "20260609_150306",
+    "base_model": "./deepseek-coder-7b-base",
+    "adapters": "./qlora-tcl-model-local",
+    "num_queries": 16,
+    "avg_latency_seconds": 1.505,
+    "total_latency_seconds": 24.084
+  },
+  "results": [
+    {
+      "id": 1,
+      "category": "Floorplan",
+      "instruction": "Create a floorplan with a core utilization of 0.7 and a core offset of 10 microns on all sides.",
+      "response": "floorPlan-coreUtilization0.7-coreOffset10",
+      "latency_seconds": 1.75
+    },
+    {
+      "id": 2,
+      "category": "Floorplan",
+      "instruction": "How do I set the aspect ratio of the die to 0.8 during floorplanning?",
+      "response": "Thefollowingcommandisusedtochangeasthedefaultvalueofdieto0.75:.icc2_shell>set_app_options-name\"design.floorPlanner.diagToDieRatio\"-valueto0.8",
+      "latency_seconds": 3.46
+    },
+    {
+      "id": 3,
+      "category": "Placement",
+      "instruction": "Run coarse placement while ignoring scan chains.",
+      "response": "set_app_options-nameroute.ignore_scan_chain\\-value{true}",
+      "latency_seconds": 1.403
+    },
+    {
+      "id": 4,
+      "category": "Placement",
+      "instruction": "Place all macros first before placing standard cells.",
+      "response": "set_app_options-namerule.place.enable_cell_pin_swap\\-valuefalse",
+      "latency_seconds": 1.572
+    },
+    {
+      "id": 5,
+      "category": "Placement",
+      "instruction": "Fix the placement of a specific cell named 'u_mem_ctrl' so it doesn't move during optimization.",
+      "response": "set_app_options-nameplace.enable_move_during_opt\\-valuefalse",
+      "latency_seconds": 1.388
+    },
+    {
+      "id": 6,
+      "category": "CTS",
+      "instruction": "Run clock tree synthesis and target a maximum clock skew of 100 picoseconds.",
+      "response": "set_app_options-namects.max_delay\\-value25",
+      "latency_seconds": 1.257
+    },
+    {
+      "id": 7,
+      "category": "CTS",
+      "instruction": "Exclude the clock net named 'clk_scan' from clock tree synthesis.",
+      "response": "set_app_options-namects.enable_exclude_nets\\-value{clk_scan}",
+      "latency_seconds": 1.763
+    },
+    {
+      "id": 8,
+      "category": "Routing",
+      "instruction": "Run global routing and set the maximum number of routing layers to 9.",
+      "response": "%vcs-sverilog<file_name>",
+      "latency_seconds": 0.995
+    },
+    {
+      "id": 9,
+      "category": "Routing",
+      "instruction": "Run detail routing and then check for DRC violations.",
+      "response": "run_detail-drc",
+      "latency_seconds": 0.52
+    },
+    {
+      "id": 10,
+      "category": "Timing",
+      "instruction": "Report the worst negative slack and the total negative slack across all paths.",
+      "response": "Path1->2(0.5)",
+      "latency_seconds": 0.782
+    },
+    {
+      "id": 11,
+      "category": "Timing",
+      "instruction": "Create a clock constraint with a period of 2 nanoseconds on the port named 'clk'.",
+      "response": "create_clock-period2.0[get_ports{clk}]",
+      "latency_seconds": 1.193
+    },
+    {
+      "id": 12,
+      "category": "Timing",
+      "instruction": "Set a false path between two registers 'reg_a' and 'reg_b'.",
+      "response": "set_app_options-nameenable_register_paths.disable_all\\-value{true}",
+      "latency_seconds": 1.521
+    },
+    {
+      "id": 13,
+      "category": "Power",
+      "instruction": "Report the total power consumption of the design broken down by dynamic and leakage power.",
+      "response": "TotalPowerConsumption=1024mWDynamicPowerConsumtion=568mWLeakagePowerConsumtion=456mW",
+      "latency_seconds": 2.399
+    },
+    {
+      "id": 14,
+      "category": "Power",
+      "instruction": "Insert power switches for the power domain named 'PD_CPU'.",
+      "response": "set_isolation-from[get_pins{U1/A}]\\-to[get_pins{U2/B}]",
+      "latency_seconds": 2.144
+    },
+    {
+      "id": 15,
+      "category": "Design Checks",
+      "instruction": "Check the design for any unconnected ports or nets.",
+      "response": "%vcs-sverilog<file_name>",
+      "latency_seconds": 0.998
+    },
+    {
+      "id": 16,
+      "category": "Design Checks",
+      "instruction": "Save the current design state to a file called 'after_route.dcp'.",
+      "response": "write_checkpoint-forceafter_route.dcp",
+      "latency_seconds": 0.939
+    }
+  ]
+}
