@@ -151,7 +151,7 @@ def run_inference(model, tokenizer, instruction: str, max_new_tokens: int = 200)
         max_new_tokens=max_new_tokens,
         do_sample=False,            # Greedy decoding — deterministic, best for Tcl commands
         temperature=1.0,
-        repetition_penalty=1.1,     # Prevents the model looping on the same token
+        repetition_penalty=1.0,     # FIXED: penalizing repetition destroys spaces in code generation!
         eos_token_id=tokenizer.eos_token_id,
         pad_token_id=tokenizer.eos_token_id,
     )
