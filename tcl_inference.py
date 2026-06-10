@@ -62,14 +62,14 @@ def load_inference_model():
 
 def build_rag_prompt(instruction: str, context: str) -> str:
     """
-    Injects the retrieved manual chunks directly into the prompt so the model
-    doesn't have to rely purely on zero-shot memory.
+    Injects the retrieved manual chunks directly into the Instruction block
+    so the LoRA adapter recognizes the exact prompt format it was trained on.
     """
     return (
-        "### Context:\n"
-        "Use the following Synopsys manual extracts to formulate your command.\n"
-        f"{context}\n\n"
-        f"### Instruction:\n{instruction}\n\n"
+        "### Instruction:\n"
+        "Use the following Synopsys manual extracts to formulate your command.\n\n"
+        f"---\n{context}\n---\n\n"
+        f"Query: {instruction}\n\n"
         "### Response:\n"
     )
 
@@ -111,8 +111,10 @@ def main():
                 eos_token_id=tokenizer.eos_token_id,
             )
             
-        generated_ids = outputs[0][inputs["input_ids"].shape[1]:]
-        response = tokenizer.decode(generated_ids, skip_special_tokens=True).strip()
+        # Decode the entire output first, then split off the response
+        # This prevents SentencePiece tokenizers from dropping leading spaces!
+        full_output = tokenizer.decode(outputs[0], skip_special_tokens=True)
+        response = full_output.split("### Response:\n")[-1].strip()
         
         print("\n>>> GENERATED COMMAND:")
         # Print green text for visibility if terminal supports it
