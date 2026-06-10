@@ -23,16 +23,34 @@ MODEL_ID = "./deepseek-coder-7b-base"
 ADAPTER_PATH = "./qlora-tcl-model-local"
 
 def load_inference_model():
-    print(f"Loading 4-bit Base Model from {MODEL_ID}...")
-    bnb_config = BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_quant_type="nf4",
-        bnb_4bit_compute_dtype=torch.bfloat16,
-        bnb_4bit_use_double_quant=True,
-    )
-    model = AutoModelForCausalLM.from_pretrained(
-        MODEL_ID, quantization_config=bnb_config, device_map="auto"
-    )
+    has_gpu = torch.cuda.is_available()
+    
+    if has_gpu:
+        print(f"GPU Detected. Loading 4-bit Base Model from {MODEL_ID}...")
+        bnb_config = BitsAndBytesConfig(
+            load_in_4bit=True,
+            bnb_4bit_quant_type="nf4",
+            bnb_4bit_compute_dtype=torch.bfloat16,
+            bnb_4bit_use_double_quant=True,
+            llm_int8_enable_fp32_cpu_offload=True,
+        )
+        # Cap GPU memory to prevent Windows from crashing the allocator
+        max_memory = {0: "7GB", "cpu": "28GB"}
+        
+        model = AutoModelForCausalLM.from_pretrained(
+            MODEL_ID, 
+            quantization_config=bnb_config, 
+            device_map="auto",
+            max_memory=max_memory
+        )
+    else:
+        print(f"No GPU Detected. Loading Base Model onto CPU RAM from {MODEL_ID}...")
+        print("Note: CPU inference will be significantly slower than GPU.")
+        model = AutoModelForCausalLM.from_pretrained(
+            MODEL_ID, 
+            device_map="cpu",
+            torch_dtype=torch.bfloat16  # Use bfloat16 to save RAM
+        )
     
     print(f"Applying LoRA Adapters from {ADAPTER_PATH}...")
     model = PeftModel.from_pretrained(model, ADAPTER_PATH)
