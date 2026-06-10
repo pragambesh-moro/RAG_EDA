@@ -12,7 +12,7 @@ Usage:
 
 import os
 import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+from transformers import AutoModelForCausalLM, PreTrainedTokenizerFast, BitsAndBytesConfig
 from peft import PeftModel
 from rag_retriever import TclRagRetriever
 
@@ -56,8 +56,12 @@ def load_inference_model():
     model = PeftModel.from_pretrained(model, ADAPTER_PATH)
     model.eval()
     
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
-    tokenizer.pad_token = tokenizer.eos_token
+    # HF Bug Fix: AutoTokenizer falls back to a broken LlamaTokenizer that strips spaces.
+    # We MUST load the fast tokenizer explicitly from the tokenizer.json file.
+    tokenizer_file = os.path.join(MODEL_ID, "tokenizer.json")
+    tokenizer = PreTrainedTokenizerFast(tokenizer_file=tokenizer_file)
+    tokenizer.pad_token = "<｜end▁of▁sentence｜>"
+    tokenizer.eos_token = "<｜end▁of▁sentence｜>"
     return model, tokenizer
 
 def build_rag_prompt(instruction: str, context: str) -> str:

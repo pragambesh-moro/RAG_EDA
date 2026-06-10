@@ -8,7 +8,7 @@ import torch
 from datasets import load_dataset
 from transformers import (
     AutoModelForCausalLM,
-    AutoTokenizer,
+    PreTrainedTokenizerFast,
     BitsAndBytesConfig,
 )
 from peft import LoraConfig, prepare_model_for_kbit_training
@@ -58,8 +58,9 @@ def main():
 
     # ── Tokenizer ──────────────────────────────────────────────
     print("\n[2/5] Loading tokenizer...")
-    tokenizer = AutoTokenizer.from_pretrained(MODEL_ID)
-    tokenizer.pad_token = tokenizer.eos_token
+    tokenizer_file = os.path.join(MODEL_ID, "tokenizer.json")
+    tokenizer = PreTrainedTokenizerFast(tokenizer_file=tokenizer_file)
+    tokenizer.pad_token = "<｜end▁of▁sentence｜>"
     tokenizer.padding_side = "right"
 
     # ── Quantisation Config ────────────────────────────────────
