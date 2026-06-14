@@ -1,9 +1,19 @@
---index-url https://download.pytorch.org/whl/rocm6.2
+--extra-index-url https://download.pytorch.org/whl/rocm6.2
+
+# AMD Native Compute Stack
 torch
 torchvision
 torchaudio
+
+# Hugging Face Ecosystem
 transformers>=4.40.0
 peft
 trl
 datasets
 accelerate
+
+# Required underlying dependencies for PEFT/Tokenization
+scipy
+ninja
+protobuf
+sentencepiece
