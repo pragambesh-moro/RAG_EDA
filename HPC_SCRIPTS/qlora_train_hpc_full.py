@@ -55,6 +55,8 @@ def main():
     tokenizer_file = os.path.join(MODEL_ID, "tokenizer.json")
     tokenizer = PreTrainedTokenizerFast(tokenizer_file=tokenizer_file)
     tokenizer.pad_token = "<｜end▁of▁sentence｜>"
+    tokenizer.eos_token = "<｜end▁of▁sentence｜>"
+    tokenizer.bos_token = "<｜begin▁of▁sentence｜>"
     tokenizer.padding_side = "right"
 
     # ── Model ──────────────────────────────────────────────────
