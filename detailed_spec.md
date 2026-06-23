@@ -41,11 +41,11 @@ To teach the model Synopsys Tcl idioms, we generated an instruction-tuning datas
 - **Extraction Logic**: We use regular expressions to identify chunks containing inline code blocks with common EDA keywords (`icc2_shell>`, `set_app_options`, `create_placement`). 
 - **Formatting**: The extracted blocks are reformatted into Alpaca-style `{instruction, output}` pairs, stored in `dataset.jsonl`.
 
-### 4.2 QLoRA HPC Training (`qlora_train_local.py`)
-We fine-tuned the `deepseek-coder-7b-base` model.
-- **Hardware**: Offline HPC cluster using 2x NVIDIA A100 (10GB MIG slices).
-- **Constraints**: Since the HPC nodes lack outbound internet, all HuggingFace weights and Linux Python wheels (`bitsandbytes`, `peft`) were downloaded locally on Windows and transferred via `scp`/`rsync`.
-- **Quantization**: 4-bit `nf4` NormalFloat quantization with double quantization enabled. This allowed us to train a 7B parameter model within a highly restricted 10GB VRAM footprint.
+### 4.2 QLoRA Local AMD Training (`qlora_train_local.py`)
+We fine-tuned the `deepseek-coder-7b-base` model locally.
+- **Hardware**: Local Windows machine utilizing WSL (Windows Subsystem for Linux) and an AMD GPU.
+- **Environment**: Configured using AMD ROCm (`HSA_OVERRIDE_GFX_VERSION`) to enable native PyTorch acceleration on consumer AMD silicon, bypassing the need for an enterprise HPC cluster.
+- **Quantization**: 4-bit `nf4` NormalFloat quantization with double quantization enabled. This allowed us to train a 7B parameter model within a highly restricted consumer VRAM footprint.
 - **LoRA Config**: `r=16`, `alpha=32`, targeting `q_proj`, `v_proj`, `k_proj`, and `o_proj`.
 
 ---

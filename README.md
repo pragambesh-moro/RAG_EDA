@@ -36,7 +36,7 @@ graph TD
     B -->|semantic_chunker.py <br> Header Splitting| C(semantic_chunks.jsonl)
     C -->|build_vector_db.py <br> BAE Embeddings| D[(Chroma Vector DB)]
     C -->|generate_sft_dataset.py| E(Instruction Dataset)
-    E -->|qlora_train.py <br> HPC A100 Cluster| F[LoRA Weights]
+    E -->|qlora_train.py <br> Local AMD GPU | F[LoRA Weights]
     F -->|llama.cpp| G[Quantized GGUF]
     G -->|Ollama| H[Local Chat Interface]
     D -.->|Context Injection| H
@@ -81,17 +81,16 @@ python semantic_chunker.py
 python build_vector_db.py
 ```
 
-### Phase 3: HPC Fine-Tuning
+### Phase 3: Local Fine-Tuning (AMD ROCm)
 ```bash
 # 4. Generate SFT instruction pairs locally
 python generate_sft_dataset.py
 
-# 5. Download model weights and dependencies for offline transfer
+# 5. Download model weights 
 python download_hf_model.py
-python download_hpc_wheels.py
 
-# 6. Submit to Slurm on HPC
-sbatch hpc_submit.slurm
+# 6. Train using QLoRA natively on AMD GPU via WSL/Linux with ROCm
+python qlora_train_local.py
 ```
 
 ### Phase 4: Quantization & Deployment
