@@ -1,34 +1,29 @@
 """
-evaluate_model.py — Inference & Evaluation for the QLoRA Fine-Tuned TCL Model
+evaluate_model.py — Inference & Evaluation for the Ollama GGUF Model
 
-Tests the locally trained LoRA adapters against a curated set of EDA queries,
+Tests the Ollama deployed model against a curated set of EDA queries,
 records outputs, latency, and saves a timestamped JSON results file.
 
 Usage:
     python evaluate_model.py
-    python evaluate_model.py --base_model ./deepseek-coder-7b-base --adapters ./qlora-tcl-model-local
+    python evaluate_model.py --model eda-coder
 """
 
 import json
 import time
 import argparse
+import requests
 from datetime import datetime
 from pathlib import Path
-
-import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
-from peft import PeftModel
 
 # ─────────────────────────────────────────────
 # Defaults
 # ─────────────────────────────────────────────
-DEFAULT_BASE_MODEL = "./deepseek-coder-7b-base"
-DEFAULT_ADAPTERS   = "./qlora-tcl-model-local"
-RESULTS_DIR        = "./eval_results"
+DEFAULT_MODEL = "eda-coder"
+RESULTS_DIR   = "./eval_results"
 
 # ─────────────────────────────────────────────
 # Test Suite
-# Covers all major physical design workflow stages
 # ─────────────────────────────────────────────
 TEST_QUERIES = [
     # Floorplan
@@ -111,78 +106,51 @@ TEST_QUERIES = [
 ]
 
 
-def build_prompt(instruction: str) -> str:
-    return f"### Instruction:\n{instruction}\n\n### Response:\n"
-
-
-def load_model(base_model_path: str, adapter_path: str):
-    print(f"\nLoading base model from: {base_model_path}")
-    bnb_config = BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_quant_type="nf4",
-        bnb_4bit_compute_dtype=torch.bfloat16,
-        bnb_4bit_use_double_quant=True,
-    )
-    model = AutoModelForCausalLM.from_pretrained(
-        base_model_path,
-        quantization_config=bnb_config,
-        device_map="auto",
-    )
-
-    print(f"Loading LoRA adapters from: {adapter_path}")
-    model = PeftModel.from_pretrained(model, adapter_path)
-    model.eval()
-
-    tokenizer = AutoTokenizer.from_pretrained(base_model_path)
-    tokenizer.pad_token = tokenizer.eos_token
-
-    print("Model ready for inference.\n")
-    return model, tokenizer
-
-
-@torch.inference_mode()
-def run_inference(model, tokenizer, instruction: str, max_new_tokens: int = 200) -> tuple[str, float]:
-    prompt = build_prompt(instruction)
-    inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+def run_inference(model_name: str, instruction: str) -> tuple[str, float]:
+    url = "http://localhost:11434/api/generate"
+    # Ollama handles the prompt template (set in Modelfile), so we just pass the instruction.
+    payload = {
+        "model": model_name,
+        "system": "You are an expert Synopsys EDA physical design assistant. You must output ONLY the precise Tcl command requested. Do not provide explanations, markdown formatting, or preamble.",
+        "prompt": instruction,
+        "stream": False,
+        "options": {
+            "temperature": 0.1,
+            "top_p": 0.95,
+        }
+    }
 
     t0 = time.perf_counter()
-    outputs = model.generate(
-        **inputs,
-        max_new_tokens=max_new_tokens,
-        do_sample=False,            # Greedy decoding — deterministic, best for Tcl commands
-        temperature=1.0,
-        repetition_penalty=1.0,     # FIXED: penalizing repetition destroys spaces in code generation!
-        eos_token_id=tokenizer.eos_token_id,
-        pad_token_id=tokenizer.eos_token_id,
-    )
+    try:
+        response = requests.post(url, json=payload)
+        response.raise_for_status()
+        data = response.json()
+        generated_text = data.get("response", "").strip()
+    except Exception as e:
+        generated_text = f"ERROR: {str(e)}"
+
     elapsed = time.perf_counter() - t0
-
-    # Decode only the generated tokens (strip the prompt)
-    generated_ids = outputs[0][inputs["input_ids"].shape[1]:]
-    response = tokenizer.decode(generated_ids, skip_special_tokens=True).strip()
-
-    return response, elapsed
+    return generated_text, elapsed
 
 
-def run_evaluation(base_model: str, adapters: str):
-    model, tokenizer = load_model(base_model, adapters)
-
+def run_evaluation(model_name: str):
     results = []
     total_latency = 0.0
 
     print("=" * 65)
-    print(f"EVALUATION — {len(TEST_QUERIES)} test queries")
+    print(f"EVALUATION — {len(TEST_QUERIES)} test queries via Ollama API")
+    print(f"Model: {model_name}")
     print("=" * 65)
 
     for idx, query in enumerate(TEST_QUERIES, 1):
         print(f"\n[{idx:02d}/{len(TEST_QUERIES)}] [{query['category']}]")
         print(f"  Q: {query['instruction']}")
 
-        response, latency = run_inference(model, tokenizer, query["instruction"])
+        response, latency = run_inference(model_name, query["instruction"])
         total_latency += latency
 
         print(f"  A: {response}")
-        print(f"  ⏱  {latency:.2f}s")
+        print(f"  [Latency] {latency:.2f}s")
 
         results.append({
             "id": idx,
@@ -200,8 +168,7 @@ def run_evaluation(base_model: str, adapters: str):
     summary = {
         "metadata": {
             "timestamp": timestamp,
-            "base_model": base_model,
-            "adapters": adapters,
+            "model_name": model_name,
             "num_queries": len(TEST_QUERIES),
             "avg_latency_seconds": round(total_latency / len(TEST_QUERIES), 3),
             "total_latency_seconds": round(total_latency, 3),
@@ -223,12 +190,16 @@ def run_evaluation(base_model: str, adapters: str):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Evaluate the fine-tuned QLoRA TCL model.")
-    parser.add_argument("--base_model", type=str, default=DEFAULT_BASE_MODEL, help="Path to the base model directory.")
-    parser.add_argument("--adapters",   type=str, default=DEFAULT_ADAPTERS,   help="Path to the LoRA adapter directory.")
+    parser = argparse.ArgumentParser(description="Evaluate the deployed Ollama TCL model.")
+    parser.add_argument("--model", type=str, default=DEFAULT_MODEL, help="Name of the Ollama model to evaluate.")
     args = parser.parse_args()
 
-    import os
-    os.environ["PYTHONUTF8"] = "1"
+    # Check if Ollama is running
+    try:
+        requests.get("http://localhost:11434")
+    except requests.exceptions.ConnectionError:
+        print("\nERROR: Could not connect to Ollama.")
+        print("Please ensure Ollama is running in the background.")
+        exit(1)
 
-    run_evaluation(args.base_model, args.adapters)
+    run_evaluation(args.model)

@@ -1,97 +1,71 @@
 """
-tcl_inference.py — The Final RAG + SFT Application
+tcl_inference.py — The Final RAG + SFT Application via Ollama
 
-This script combines Phase 3 (Vector Retrieval) with Phase 4 (SFT Generation).
-It takes a plain-English physical design query, searches the Synopsys 
-manuals in ChromaDB for context, and asks the locally-trained QLoRA model
-to generate the exact Tcl command.
+This script takes a plain-English physical design query, searches the Synopsys 
+manuals in ChromaDB for context, and asks the local Ollama model to generate 
+the exact Tcl command.
 
 Usage:
     python tcl_inference.py
 """
 
 import os
-import torch
-from transformers import AutoModelForCausalLM, PreTrainedTokenizerFast, BitsAndBytesConfig
-from peft import PeftModel
+import requests
+import json
 from rag_retriever import TclRagRetriever
 
-# ─────────────────────────────────────────────
-# Paths
-# ─────────────────────────────────────────────
-MODEL_ID = "./deepseek-coder-7b-base"
-ADAPTER_PATH = "./qlora-tcl-model-local"
+MODEL_NAME = "eda-coder"
 
-def load_inference_model():
-    has_gpu = torch.cuda.is_available()
-    
-    if has_gpu:
-        print(f"GPU Detected. Loading 4-bit Base Model from {MODEL_ID}...")
-        bnb_config = BitsAndBytesConfig(
-            load_in_4bit=True,
-            bnb_4bit_quant_type="nf4",
-            bnb_4bit_compute_dtype=torch.bfloat16,
-            bnb_4bit_use_double_quant=True,
-            llm_int8_enable_fp32_cpu_offload=True,
-        )
-        # Cap GPU memory to prevent Windows from crashing the allocator
-        max_memory = {0: "7GB", "cpu": "28GB"}
-        
-        model = AutoModelForCausalLM.from_pretrained(
-            MODEL_ID, 
-            quantization_config=bnb_config, 
-            device_map="auto",
-            max_memory=max_memory
-        )
-    else:
-        print(f"No GPU Detected. Loading Base Model onto CPU RAM from {MODEL_ID}...")
-        print("Note: CPU inference will be significantly slower than GPU.")
-        model = AutoModelForCausalLM.from_pretrained(
-            MODEL_ID, 
-            device_map="cpu",
-            torch_dtype=torch.bfloat16  # Use bfloat16 to save RAM
-        )
-    
-    print(f"Applying LoRA Adapters from {ADAPTER_PATH}...")
-    model = PeftModel.from_pretrained(model, ADAPTER_PATH)
-    model.eval()
-    
-    # HF Bug Fix: AutoTokenizer falls back to a broken LlamaTokenizer that strips spaces.
-    # We MUST load the fast tokenizer explicitly from the tokenizer.json file.
-    tokenizer_file = os.path.join(MODEL_ID, "tokenizer.json")
-    tokenizer = PreTrainedTokenizerFast(tokenizer_file=tokenizer_file)
-    tokenizer.pad_token = "<｜end▁of▁sentence｜>"
-    tokenizer.eos_token = "<｜end▁of▁sentence｜>"
-    return model, tokenizer
+def generate_with_ollama(prompt: str) -> str:
+    url = "http://localhost:11434/api/generate"
+    payload = {
+        "model": MODEL_NAME,
+        "system": "You are an expert Synopsys EDA physical design assistant. You must output ONLY the precise Tcl command requested based on the provided context. Do not provide explanations, markdown formatting, or preamble.",
+        "prompt": prompt,
+        "stream": False,
+        "options": {
+            "temperature": 0.1,
+            "top_p": 0.95,
+        }
+    }
+    try:
+        response = requests.post(url, json=payload)
+        response.raise_for_status()
+        data = response.json()
+        return data.get("response", "").strip()
+    except requests.exceptions.ConnectionError:
+        return "ERROR: Could not connect to Ollama. Please ensure Ollama is running."
+    except Exception as e:
+        return f"ERROR: {str(e)}"
 
 def build_rag_prompt(instruction: str, context: str) -> str:
     """
-    Injects the retrieved manual chunks directly into the Instruction block
-    so the LoRA adapter recognizes the exact prompt format it was trained on.
+    Injects the retrieved manual chunks directly into the prompt.
+    The Ollama Modelfile handles the '### Instruction:' formatting.
     """
     return (
-        "### Instruction:\n"
         "Use the following Synopsys manual extracts to formulate your command.\n\n"
         f"---\n{context}\n---\n\n"
-        f"Query: {instruction}\n\n"
-        "### Response:\n"
+        f"Query: {instruction}\n"
     )
 
 def main():
-    # Prevent Windows trl/pathlib encoding crashes
-    os.environ["PYTHONUTF8"] = "1"
-    
     print("=" * 60)
-    print("EDA Tool Command LLM — Interactive Shell")
+    print("EDA Tool Command LLM — Interactive Shell (Ollama Powered)")
     print("=" * 60)
     
     # 1. Spin up the Vector DB
     retriever = TclRagRetriever()
     
-    # 2. Spin up the Fine-Tuned Model
-    model, tokenizer = load_inference_model()
+    # Check if Ollama is running
+    try:
+        requests.get("http://localhost:11434")
+    except requests.exceptions.ConnectionError:
+        print("\nERROR: Could not connect to Ollama.")
+        print("Please ensure Ollama is running in the background before starting.")
+        return
     
-    print("\nSystem ready! Type 'quit' to exit.")
+    print(f"\nSystem ready! Connected to Ollama model '{MODEL_NAME}'. Type 'quit' to exit.")
     
     while True:
         print("\n" + "─"*60)
@@ -103,22 +77,9 @@ def main():
         context = retriever.retrieve_tcl_context(user_intent, top_k=2)
         
         prompt = build_rag_prompt(user_intent, context)
-        inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
         
-        print("[2/2] Generating Tcl Command...")
-        with torch.inference_mode():
-            outputs = model.generate(
-                **inputs,
-                max_new_tokens=150,
-                do_sample=False,
-                repetition_penalty=1.0,     # MUST be 1.0 to preserve spaces in code
-                eos_token_id=tokenizer.eos_token_id,
-            )
-            
-        # Decode the entire output first, then split off the response
-        # This prevents SentencePiece tokenizers from dropping leading spaces!
-        full_output = tokenizer.decode(outputs[0], skip_special_tokens=True)
-        response = full_output.split("### Response:\n")[-1].strip()
+        print(f"[2/2] Generating Tcl Command via Ollama ({MODEL_NAME})...")
+        response = generate_with_ollama(prompt)
         
         print("\n>>> GENERATED COMMAND:")
         # Print green text for visibility if terminal supports it

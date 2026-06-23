@@ -1,149 +1,115 @@
-# EDA Tool Command LLM
+<div align="center">
+  <h1>🛠️ EDA Coder</h1>
+  <p><b>A hybrid RAG + QLoRA pipeline that translates plain-English hardware design intent into syntactically perfect Synopsys Tcl commands.</b></p>
+</div>
 
-> A hybrid RAG + QLoRA pipeline that ingests Synopsys EDA tool manuals and translates plain-English physical design intent into syntactically correct Tcl commands.
+<br/>
 
-## Overview
+## 🌟 Overview
 
-Physical design engineers working with Synopsys tools like IC Compiler II and Design Compiler spend significant time looking up the correct Tcl command syntax across thousands of pages of documentation. This project automates that process end-to-end.
+Physical design engineers using Synopsys tools (IC Compiler II, Design Compiler, etc.) spend thousands of hours digging through dense documentation to find the exact Tcl command syntax for complex routines. General-purpose LLMs hallucinate these commands because the manuals are proprietary. 
 
-The system works in two complementary stages:
-
-1. **RAG (Primary)** — At inference time, a plain-English query is embedded and matched against a locally-hosted Vector Database of 23,000+ indexed manual chunks. The most relevant documentation context is retrieved and fed to a Code LLM, grounding its output in the actual manual.
-
-2. **QLoRA SFT (Fallback)** — A `deepseek-coder-7b-base` model is fine-tuned on a synthetic instruction dataset extracted from the same manuals, teaching the model Synopsys-specific command idioms that general-purpose LLMs are unaware of.
+**EDA Coder solves this through a two-stage hybrid approach:**
+1. **QLoRA Fine-Tuning (SFT):** We fine-tuned a base code model (`deepseek-coder-7b-base`) on a synthetic dataset extracted directly from the manuals to teach it Synopsys idioms.
+2. **Retrieval-Augmented Generation (RAG):** At inference time, the user's query searches a massive local vector database of 23,000+ manual chunks. The retrieved context is injected into the LLM's prompt, guaranteeing perfect syntax and removing hallucinations.
 
 ---
 
-## Architecture
+## ⚡ Performance: RAG vs. Base SFT
 
-```
-Raw PDFs (Synopsys Manuals)
-        │
-        ▼
-┌─────────────────────┐
-│  batch_converter.py │  ← Layout-aware PDF parsing (docling)
-│  Phase 1: Ingestion │    Page-range batching to avoid OOM
-└────────┬────────────┘
-         │  parsed_markdown/
-         ▼
-┌──────────────────────┐
-│ semantic_chunker.py  │  ← Header-level Markdown splitting
-│ Phase 2: Chunking    │    Preserves Tcl blocks intact
-└────────┬─────────────┘
-         │  semantic_chunks.jsonl  (~23,000 chunks)
-         ▼
-┌──────────────────────┐       ┌─────────────────────────┐
-│  build_vector_db.py  │       │  generate_sft_dataset.py│
-│  Phase 3: Embedding  │       │  Phase 4: SFT Data Gen  │
-│  bge-small-en-v1.5   │       │  Heuristic Tcl extractor│
-│  ChromaDB (local)    │       └────────────┬────────────┘
-└────────┬─────────────┘                    │  dataset.jsonl
-         │  chroma_db/                      ▼
-         ▼                       ┌──────────────────────┐
-┌──────────────────────┐         │   qlora_train.py     │
-│  rag_retriever.py    │         │   HPC: A100 (20GB)   │
-│  Cosine Similarity   │         │   4-bit QLoRA / PEFT │
-│  BGE prefix encoding │         │   hpc_submit.slurm   │
-└──────────────────────┘         └──────────────────────┘
+We pit the Base Fine-Tuned Model against the full RAG Pipeline in a stress test. The results clearly demonstrate why RAG is necessary for complex EDA scripting:
+
+| Query | Base SFT Model (No RAG) | EDA Coder (SFT + RAG) |
+|---|---|---|
+| *Create a floorplan with 0.7 utilization and 10 micron offset.* | ❌ `create_floorplan -core_utilization 0.7 -side_offset 10` (Hallucinated command & flags) | ✅ `initialize_floorplan -core_utilization 0.7 -shape R -orientation N -side_ratio {3.0 1.0} -core_offset {100.0} -flip_first_row true -coincident_boundary true` |
+| *Place all macros first before placing standard cells.* | ❌ `set_app_options-nameplace.macro_first_in_placement_flow\-value1` (Hallucinated app option) | ✅ `set_app_options -list {plan.macro.style islands}` (Exact ICC2 syntax from manual) |
+
+---
+
+## 🏗️ Architecture Pipeline
+
+The repository is structured to take you all the way from raw PDFs to a standalone, quantised Ollama deployment.
+
+```mermaid
+graph TD
+    A[Raw Proprietary PDFs] -->|batch_converter.py <br> Docling Parser| B(Parsed Markdown)
+    B -->|semantic_chunker.py <br> Header Splitting| C(semantic_chunks.jsonl)
+    C -->|build_vector_db.py <br> BAE Embeddings| D[(Chroma Vector DB)]
+    C -->|generate_sft_dataset.py| E(Instruction Dataset)
+    E -->|qlora_train.py <br> HPC A100 Cluster| F[LoRA Weights]
+    F -->|llama.cpp| G[Quantized GGUF]
+    G -->|Ollama| H[Local Chat Interface]
+    D -.->|Context Injection| H
 ```
 
 ---
 
-## Repository Structure
+## 🚀 Quick Start (Deployment)
 
-```
-RAG_EDA/
-├── batch_converter.py        # Phase 1: PDF → Markdown via docling
-├── semantic_chunker.py       # Phase 2: Markdown → semantic_chunks.jsonl
-├── build_vector_db.py        # Phase 3: Chunks → ChromaDB embeddings
-├── rag_retriever.py          # Phase 3: Query → Top-K context retrieval
-├── generate_sft_dataset.py   # Phase 4: Chunks → dataset.jsonl (local)
-├── qlora_train.py            # Phase 4: QLoRA fine-tuning (HPC)
-├── hpc_submit.slurm          # Phase 4: Slurm batch submission script
-├── download_hf_model.py      # Helper: Download model weights locally
-├── download_hpc_wheels.py    # Helper: Download Linux wheels for HPC transfer
-├── hpc.md                    # HPC cluster reference notes
-├── parsed_markdown/          # Output: Raw markdown from PDFs
-├── semantic_chunks.jsonl     # Output: 23,000+ indexed chunks
-├── chroma_db/                # Output: Persistent local vector store
-└── dataset.jsonl             # Output: SFT instruction-output pairs
-```
+If you just want to run the model on your lab machines, you do not need to run the data processing or HPC training pipelines.
 
----
+Simply grab the distributable package (`eda_coder_deploy`) and run the setup script:
 
-## Quick Start
-
-### Prerequisites
-- Python 3.11+
-- CUDA-enabled GPU (optional for Phase 3, required for Phase 4)
-- Synopsys PDF manuals placed in `./synopsys_pdfs/`
-
-### Installation
 ```bash
-python -m venv .venv
-.venv\Scripts\activate       # Windows
-pip install docling langchain-text-splitters langchain-huggingface langchain-chroma chromadb sentence-transformers
+# On Linux Lab Machines
+chmod +x install_linux.sh
+./install_linux.sh
+
+# The script will load the GGUF into Ollama and start the chat interface:
+source .venv/bin/activate
+python tcl_inference.py
 ```
 
-### Phase 1–3: Local RAG Pipeline
+---
+
+## 🛠️ Reproducing the Pipeline
+
+If you wish to rebuild the dataset, re-train the model, or update the database with new manuals, follow these steps:
+
+### Phase 1: Ingestion & Chunking
 ```bash
-# Convert PDFs to structured Markdown
+# 1. Convert PDFs to Markdown (Requires docling)
 python batch_converter.py --pdf_dir ./synopsys_pdfs --out_dir ./parsed_markdown --num_threads 4
 
-# Chunk Markdown at semantic header boundaries
+# 2. Chunk Markdown into semantic blocks
 python semantic_chunker.py
-
-# Build the local vector database (~28 min on CPU)
-python build_vector_db.py
-
-# Test a retrieval query
-python rag_retriever.py
 ```
 
-### Phase 4: HPC Fine-Tuning (Offline)
+### Phase 2: RAG Vector DB
 ```bash
-# 1. Generate synthetic instruction dataset locally
+# 3. Embed the chunks into ChromaDB (~28 min on CPU)
+python build_vector_db.py
+```
+
+### Phase 3: HPC Fine-Tuning
+```bash
+# 4. Generate SFT instruction pairs locally
 python generate_sft_dataset.py
 
-# 2. Download Linux-compatible wheels and model weights locally
-python download_hpc_wheels.py
+# 5. Download model weights and dependencies for offline transfer
 python download_hf_model.py
+python download_hpc_wheels.py
 
-# 3. Transfer to HPC via scp/rsync, then on the login node:
-pip install --no-index --find-links ./hpc_wheels transformers peft trl bitsandbytes datasets accelerate
-
-# 4. Submit the training job
+# 6. Submit to Slurm on HPC
 sbatch hpc_submit.slurm
 ```
 
----
-
-## Key Design Decisions
-
-| Decision | Rationale |
-|---|---|
-| `docling` for PDF parsing | Preserves table structures and code blocks that standard PDF text extractors destroy |
-| Page-range batching (50 pages) | Prevents `std::bad_alloc` OOM crashes on machines with ≤ 32GB RAM |
-| Header-level chunking | Guarantees Tcl command blocks are never split across embedding boundaries |
-| `bge-small-en-v1.5` embeddings | Asymmetric retrieval model optimized for short query → long document matching |
-| BGE instruction prefix | Required by the model architecture to activate asymmetric retrieval mode |
-| ChromaDB (local) | Zero-latency, no network dependency, persistent across sessions |
-| `deepseek-coder-7b-base` | Code-specialized pre-training; base model avoids instruct bias for custom SFT |
-| QLoRA 4-bit (`nf4` + double quant) | Reduces a 7B model to ~6GB VRAM; fits in a 20GB MIG GPU allocation |
-| Offline HPC wheel transfer | HPC compute/login nodes have no outbound internet access |
+### Phase 4: Quantization & Deployment
+```bash
+# 7. Merge LoRA weights and convert to GGUF using llama.cpp
+# 8. Import to Ollama
+ollama create eda-coder -f Modelfile
+```
 
 ---
 
-## Hardware Reference
+## 📜 Key Design Decisions
 
-| Stage | Machine | Key Specs |
-|---|---|---|
-| Phase 1–2 (Ingestion) | Local | Intel Core i9-13900HX, 32GB RAM |
-| Phase 3 (Embedding) | Local | i9-13900HX, CPU-only, ~28 min |
-| Phase 4 (Training) | HPC | 2× A100 MIG 10GB slices, 256GB RAM |
+- **Docling for PDF Parsing:** Standard PDF parsers destroy code blocks and tables. `docling` reconstructs them perfectly using layout analysis.
+- **Header-Level Chunking:** Standard token-based chunking splits Tcl scripts in half. We split purely on Markdown headers (`#`, `##`) to preserve code integrity.
+- **`bge-small-en-v1.5` Embeddings:** Highly optimized for asymmetric retrieval (short questions matching against long manual pages).
+- **Ollama GGUF backend:** Running a 7B parameter model in FP16 takes 14GB of VRAM. By quantizing to 4-bit (`Q4_K_M`) and running via Ollama, we can deploy the final RAG pipeline on standard lab machines with minimal hardware overhead.
 
 ---
 
-## License
-
-For internal research use only. Synopsys documentation is proprietary.
+> **Note:** The Synopsys PDF manuals and the resulting dataset are proprietary and cannot be open-sourced. This repository contains the framework and code necessary to build the pipeline on your own proprietary hardware documentation.

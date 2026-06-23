@@ -61,16 +61,10 @@ def main():
         MODEL_ID,
         torch_dtype=torch.bfloat16,
         device_map={"":  0}, 
-        attn_implementation="sdpa", # FIX: Force SDPA to prevent FlashAttention-2 ROCm bugs
+        attn_implementation="eager", # FIX: Force SDPA to prevent FlashAttention-2 ROCm bugs
         trust_remote_code=True
     )
     model.config.use_cache = False
-
-    # FIX: Upcast RMSNorm layers to float32!
-    # Pure bf16 normalization variance calculation often underflows, causing instant NaNs.
-    for name, module in model.named_modules():
-        if "norm" in name.lower():
-            module.to(torch.float32)
 
     # FIX: Ensure gradients flow correctly from LoRA adapters to inputs
     # This solves the "disconnected graph" bug in PEFT.
@@ -94,24 +88,26 @@ def main():
     print("\n[4/4] Setting training arguments...")
     training_args = SFTConfig(
         output_dir=OUTPUT_DIR,
-        per_device_train_batch_size=8,
-        gradient_accumulation_steps=4,   
-        num_train_epochs=5,              
+        per_device_train_batch_size=2,
+        gradient_accumulation_steps=16,   
+        num_train_epochs=20,              
         max_steps=-1,
-        learning_rate=2e-5,
+        learning_rate=2e-4,
         lr_scheduler_type="cosine",
-        warmup_ratio=0.05,
+        warmup_steps=2,
         max_grad_norm=1.0,               # Relaxed to 1.0 since FP32 Norm solves the instability
 
         # FIX: We can safely use checkpointing now to save VRAM
         gradient_checkpointing=True,
         gradient_checkpointing_kwargs={"use_reentrant": False},
 
-        logging_steps=5,
+        logging_steps=1,
         save_strategy="epoch",
 
-        max_seq_length=1024,             # FIX: SFTConfig expects max_seq_length, not max_length
+        max_length=1024,             # FIX: SFTConfig expects max_seq_length, not max_length
         dataset_text_field="text",
+        packing=True,
+        loss_type="nll",
 
         bf16=True,
         fp16=False,
@@ -149,7 +145,8 @@ def main():
         for p in trainer.model.parameters()
     )
     trainer.model.zero_grad()
-    
+    del outputs, sample
+    torch.cuda.empty_cache()
     if has_nan:
         print("  WARNING: NaN detected in gradients during sanity check!")
     else:

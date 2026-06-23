@@ -71,3 +71,16 @@ Thumbs.db
 
 ##CUSTOM
 hpc.md
+
+# Final Model & Deployment Artifacts
+*.gguf
+*.bin
+*.safetensors
+*.pt
+*.pth
+*.bin
+
+eda_coder_deploy/
+lora-export-clean-amd/
+merged-synopsys-7b-trimmed/
+eval_results/
