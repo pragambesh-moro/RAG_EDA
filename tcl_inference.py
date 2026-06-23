@@ -74,7 +74,7 @@ def main():
             break
             
         print("\n[1/2] Retrieving Synopsys Manual Context...")
-        context = retriever.retrieve_tcl_context(user_intent, top_k=2)
+        context = retriever.retrieve_tcl_context(user_intent, top_k=5)
         
         prompt = build_rag_prompt(user_intent, context)
         
