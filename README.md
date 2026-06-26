@@ -44,6 +44,34 @@ graph TD
 
 ---
 
+## 📂 Repository Structure
+
+```text
+RAG_EDA/
+├── eda_coder_deploy/         # Standalone deployment package
+│   ├── install_linux.sh      # Setup script for Linux
+│   ├── install_windows.ps1   # Setup script for Windows
+│   ├── run_eda_coder.sh      # Runner for Linux
+│   ├── run_eda_coder.ps1     # Runner for Windows
+│   ├── README.md             # Deployment instructions
+│   └── ...
+├── parsers/                  # PDF Ingestion & Chunking
+│   ├── batch_converter.py    # Docling PDF parser
+│   ├── semantic_chunker.py   # Markdown header splitter
+│   └── build_vector_db.py    # ChromaDB embedding script
+├── training/                 # QLoRA Fine-Tuning
+│   ├── generate_sft_dataset.py
+│   └── qlora_train_local.py
+├── eval/                     # Benchmarking & Ablation
+│   ├── run_missing_benchmark.py
+│   └── stress_test_suite.py
+├── tcl_inference.py          # Core Interactive Copilot UI
+├── rag_retriever.py          # ChromaDB Context Retriever
+└── docs_and_paper/           # VLSID 2027 Paper & Roadmaps
+```
+
+---
+
 ## 🚀 Quick Start (Deployment)
 
 If you just want to run the model on your lab machines, you do not need to run the data processing or HPC training pipelines.
