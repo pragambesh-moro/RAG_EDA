@@ -16,23 +16,41 @@ from rag_retriever import TclRagRetriever
 
 MODEL_NAME = "eda-coder"
 
+def print_banner():
+    C = "\033[96m" # Cyan
+    G = "\033[92m" # Green
+    R = "\033[0m"  # Reset
+    banner = f"""{C}
+███████╗██████╗  █████╗       ██████╗ ██████╗ ██████╗ ███████╗██████╗ 
+██╔════╝██╔══██╗██╔══██╗     ██╔════╝██╔═══██╗██╔══██╗██╔════╝██╔══██╗
+█████╗  ██║  ██║███████║     ██║     ██║   ██║██║  ██║█████╗  ██████╔╝
+██╔══╝  ██║  ██║██╔══██║     ██║     ██║   ██║██║  ██║██╔══╝  ██╔══██╗
+███████╗██████╔╝██║  ██║     ╚██████╗╚██████╔╝██████╔╝███████╗██║  ██║
+╚══════╝╚═════╝ ╚═╝  ╚═╝      ╚═════╝ ╚═════╝ ╚═════╝ ╚══════╝╚═╝  ╚═╝
+{G}           v1.0.0 - Air-Gapped Tcl Generation Pipeline{R}
+"""
+    print(banner)
+
 def generate_with_ollama(prompt: str) -> str:
     url = "http://localhost:11434/api/generate"
     payload = {
         "model": MODEL_NAME,
-        "system": "You are an expert Synopsys EDA physical design assistant. You must output ONLY the precise Tcl command requested based on the provided context. Do not provide explanations, markdown formatting, or preamble.",
+        "system": "You are an expert Synopsys EDA physical design assistant. You must output ONLY the precise Tcl command requested based on the provided context. If the requested command, tool, or flag is NOT explicitly supported or found in the provided manual context, you MUST refuse by stating: 'I cannot find this in the manual.' Do not invent or guess commands. Do not provide explanations, markdown formatting, or preamble.",
         "prompt": prompt,
         "stream": False,
         "options": {
             "temperature": 0.1,
             "top_p": 0.95,
+            "num_ctx": 8192,
         }
     }
     try:
-        response = requests.post(url, json=payload)
+        response = requests.post(url, json=payload, timeout=180)
         response.raise_for_status()
         data = response.json()
         return data.get("response", "").strip()
+    except requests.exceptions.Timeout:
+        return "ERROR: Request to Ollama timed out."
     except requests.exceptions.ConnectionError:
         return "ERROR: Could not connect to Ollama. Please ensure Ollama is running."
     except Exception as e:
@@ -50,9 +68,14 @@ def build_rag_prompt(instruction: str, context: str) -> str:
     )
 
 def main():
-    print("=" * 60)
-    print("EDA Tool Command LLM — Interactive Shell (Ollama Powered)")
-    print("=" * 60)
+    os.system('cls' if os.name == 'nt' else 'clear')
+    print_banner()
+    print("Loading RAG Retriever...")
+    print("\n" + "=" * 60)
+    print("   EDA Coder: AI Physical Design Assistant")
+    print("   Powered by Local RAG + QLoRA SFT")
+    print("   © Pragambesh Moro - Shiv Nadar University")
+    print("=" * 60 + "\n")
     
     # 1. Spin up the Vector DB
     retriever = TclRagRetriever()

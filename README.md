@@ -48,16 +48,18 @@ graph TD
 
 If you just want to run the model on your lab machines, you do not need to run the data processing or HPC training pipelines.
 
-Simply grab the distributable package (`eda_coder_deploy`) and run the setup script:
+Simply grab the distributable package and navigate to the `deploy/` directory:
 
 ```bash
+cd deploy/
+
 # On Linux Lab Machines
 chmod +x install_linux.sh
 ./install_linux.sh
 
 # The script will load the GGUF into Ollama and start the chat interface:
-source .venv/bin/activate
-python tcl_inference.py
+chmod +x run_eda_coder.sh
+./run_eda_coder.sh
 ```
 
 ---
@@ -66,38 +68,38 @@ python tcl_inference.py
 
 If you wish to rebuild the dataset, re-train the model, or update the database with new manuals, follow these steps:
 
-### Phase 1: Ingestion & Chunking
+### Phase 1: Ingestion & Chunking (`parsers/`)
 ```bash
+cd parsers/
 # 1. Convert PDFs to Markdown (Requires docling)
-python batch_converter.py --pdf_dir ./synopsys_pdfs --out_dir ./parsed_markdown --num_threads 4
+python batch_converter.py --pdf_dir ../synopsys_pdfs --out_dir ../parsed_markdown --num_threads 4
 
 # 2. Chunk Markdown into semantic blocks
 python semantic_chunker.py
 ```
 
-### Phase 2: RAG Vector DB
+### Phase 2: RAG Vector DB (`parsers/`)
 ```bash
 # 3. Embed the chunks into ChromaDB (~28 min on CPU)
 python build_vector_db.py
 ```
 
-### Phase 3: Local Fine-Tuning (AMD ROCm)
+### Phase 3: Local Fine-Tuning (`training/`)
 ```bash
+cd ../training/
 # 4. Generate SFT instruction pairs locally
 python generate_sft_dataset.py
 
-# 5. Download model weights 
-python download_hf_model.py
-
-# 6. Train using QLoRA natively on AMD GPU via WSL/Linux with ROCm
+# 5. Train using QLoRA natively on AMD GPU via WSL/Linux with ROCm
 python qlora_train_local.py
 ```
 
-### Phase 4: Quantization & Deployment
+### Phase 4: Evaluation (`eval/`)
 ```bash
-# 7. Merge LoRA weights and convert to GGUF using llama.cpp
-# 8. Import to Ollama
-ollama create eda-coder -f Modelfile
+cd ../eval/
+# 6. Run the ablation study and benchmarking suite
+python run_missing_benchmark.py
+python stress_test_suite.py
 ```
 
 ---

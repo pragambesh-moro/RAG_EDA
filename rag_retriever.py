@@ -49,6 +49,40 @@ class TclRagRetriever:
             
         return "\n".join(context_blocks)
 
+    def retrieve_random_context(self, k: int = 3) -> str:
+        """
+        Retrieves random context chunks by searching for a random string,
+        simulating 'Wrong Retrieval'.
+        """
+        import random
+        random_query = f"random meaningless query {random.randint(1, 1000000)}"
+        results = self.vectorstore.similarity_search(random_query, k=k)
+        
+        context_blocks = []
+        for i, doc in enumerate(results, 1):
+            source = doc.metadata.get("Source", "Unknown Manual")
+            block = f"--- CONTEXT BLOCK {i} ---\nSource: {source}\nContent:\n{doc.page_content}\n"
+            context_blocks.append(block)
+            
+        return "\n".join(context_blocks)
+
+    def retrieve_partial_context(self, query: str, k: int = 3) -> str:
+        """
+        Retrieves relevant context but truncates the content to simulate 'Partial Retrieval'.
+        """
+        bge_query = f"Represent this sentence for searching relevant passages: {query}"
+        results = self.vectorstore.similarity_search(bge_query, k=k)
+        
+        context_blocks = []
+        for i, doc in enumerate(results, 1):
+            source = doc.metadata.get("Source", "Unknown Manual")
+            # Truncate content to first 50 characters to make it "partial"
+            truncated_content = doc.page_content[:50] + "... [TRUNCATED]"
+            block = f"--- CONTEXT BLOCK {i} ---\nSource: {source}\nContent:\n{truncated_content}\n"
+            context_blocks.append(block)
+            
+        return "\n".join(context_blocks)
+
 if __name__ == "__main__":
     retriever = TclRagRetriever()
     

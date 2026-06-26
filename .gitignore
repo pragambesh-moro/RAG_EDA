@@ -31,6 +31,8 @@ semantic_chunks.jsonl
 # Phase 4: Generated SFT dataset (reproducible from chunks)
 dataset.jsonl
 
+docs_and_paper/
+
 # ─────────────────────────────────────────────
 # Project-Specific: Model & Database Artifacts
 # ─────────────────────────────────────────────
@@ -84,3 +86,4 @@ eda_coder_deploy/
 lora-export-clean-amd/
 merged-synopsys-7b-trimmed/
 eval_results/
+*.7z

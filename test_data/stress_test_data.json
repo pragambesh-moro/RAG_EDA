@@ -1,0 +1,57 @@
+{
+  "retrieval_tests": [
+    {
+      "id": "retrieval_01",
+      "category": "Floorplan",
+      "instruction": "Create a floorplan with a core utilization of 0.7 and a core offset of 10 microns on all sides.",
+      "expected_command": "create_floorplan -core_utilization 0.7 -core_offset 10"
+    }
+  ],
+  "hallucination_tests": [
+    {
+      "id": "halluc_01",
+      "category": "Fake Command",
+      "instruction": "Generate TCL for set_super_timing_mode -ultra",
+      "expected_refusal_keywords": ["not present", "not support", "does not exist", "cannot", "invalid", "sorry", "not found", "no information"]
+    },
+    {
+      "id": "halluc_02",
+      "category": "Fake Option",
+      "instruction": "Run coarse placement while ignoring scan chains using the -ignore_scan_chains_magic flag.",
+      "expected_refusal_keywords": ["not present", "not support", "does not exist", "cannot", "invalid", "sorry", "not found", "no information"]
+    }
+  ],
+  "topk_tests": [
+    {
+      "id": "topk_01",
+      "category": "Placement",
+      "instruction": "Place all macros first before placing standard cells.",
+      "expected_command": "place_opt -macro_placement_only"
+    }
+  ],
+  "prompt_wording_tests": [
+    {
+      "id": "wording_01",
+      "category": "Timing Constraint",
+      "variants": [
+        "Create a clock constraint with a period of 10ns on the port named clk.",
+        "Generate TCL for a 10ns clock on port clk.",
+        "How do I define a clock running at 100MHz on the clk port?",
+        "Write the TCL command to create a clock constraint for clk with 10ns period."
+      ],
+      "expected_command": "create_clock -period 10.0 [get_ports clk]"
+    }
+  ],
+  "workflow_tests": [
+    {
+      "id": "workflow_01",
+      "category": "Timing Workflow",
+      "instruction": "Create timing constraints for a 100MHz design with 2ns input delay and 3ns output delay on ports in_data and out_data respectively. The clock is named clk.",
+      "expected_commands": [
+        "create_clock -period 10.0 [get_ports clk]",
+        "set_input_delay 2.0 -clock clk [get_ports in_data]",
+        "set_output_delay 3.0 -clock clk [get_ports out_data]"
+      ]
+    }
+  ]
+}

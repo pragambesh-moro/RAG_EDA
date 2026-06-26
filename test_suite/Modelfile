@@ -1,0 +1,18 @@
+# Point this to the exact relative or absolute path of your 3.9G GGUF file
+FROM ./deepseek-synopsys-7b-Q4_K_M.gguf
+
+# Set up the exact template used during your fine-tuning training
+TEMPLATE """{{ .System }}
+### Instruction:
+{{ .Prompt }}
+
+### Response:
+"""
+
+# Low temperature ensures stable, non-hallucinatory code generation
+PARAMETER temperature 0.1
+PARAMETER top_p 0.95
+
+# Stop tokens ensure the model doesn't endlessly output gibberish loops
+PARAMETER stop "### Instruction:"
+

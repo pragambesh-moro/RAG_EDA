@@ -1,0 +1,34 @@
+[
+  {
+    "category": "Floorplan",
+    "instruction": "Create a floorplan with a core utilization of 0.7 and a core offset of 10 microns on all sides.",
+    "base_answer": "create_floorplan -core_utilization 0.7 -side_offset 10",
+    "base_latency": 6.69,
+    "rag_answer": "```\ninitialize_floorplan -core_utilization 0.7 -shape R \\ -orientation N -side_ratio {3.0 1.0} -core_offset {100.0} \\ -flip_first_row true  -coincident_boundary true\n```",
+    "rag_latency": 14.86
+  },
+  {
+    "category": "Floorplan",
+    "instruction": "How do I set the aspect ratio of the die to 0.8 during floorplanning?",
+    "base_answer": "set_app_options-nameplace.floorplan.aspect_ratio\\-value0.8",
+    "base_latency": 5.49,
+    "rag_answer": "Use the following command to create a floorplan with an aspect ratio of 0.8:  \n```\nicc2_shell> initialize_floorplan -core_utilization 0.7 -shape R \\ -orientation N -side_ratio {1.0 0.8} -core_offset {100.0} \\ -flip_first_row true  -coincident_boundary true\n```",
+    "rag_latency": 19.38
+  },
+  {
+    "category": "Placement",
+    "instruction": "Run coarse placement while ignoring scan chains.",
+    "base_answer": "set_app_options-nameplace.coarse.ignore_scan_chains\\-value1",
+    "base_latency": 6.21,
+    "rag_answer": "create_placement-coarse",
+    "rag_latency": 39.04
+  },
+  {
+    "category": "Placement",
+    "instruction": "Place all macros first before placing standard cells.",
+    "base_answer": "set_app_options-nameplace.macro_first_in_placement_flow\\-value1",
+    "base_latency": 6.32,
+    "rag_answer": "```\nset_app_options -list {plan.macro.style islands}",
+    "rag_latency": 42.22
+  }
+]
