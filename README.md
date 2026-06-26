@@ -48,11 +48,9 @@ graph TD
 
 If you just want to run the model on your lab machines, you do not need to run the data processing or HPC training pipelines.
 
-Simply grab the distributable package and navigate to the `deploy/` directory:
+Simply grab the distributable package and:
 
 ```bash
-cd deploy/
-
 # On Linux Lab Machines
 chmod +x install_linux.sh
 ./install_linux.sh
