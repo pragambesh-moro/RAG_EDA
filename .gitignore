@@ -87,3 +87,4 @@ lora-export-clean-amd/
 merged-synopsys-7b-trimmed/
 eval_results/
 *.7z
+*.zip
