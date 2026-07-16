@@ -1,17 +1,19 @@
 <div align="center">
   <h1>🛠️ EDA Coder</h1>
-  <p><b>A hybrid RAG + QLoRA pipeline that translates plain-English hardware design intent into syntactically perfect Synopsys Tcl commands.</b></p>
+  <p><b>EDA Coder: A Localized LLM Pipeline for Syntactically Exact Command Generation for CAD Tools.</b></p>
 </div>
 
 <br/>
 
 ## 🌟 Overview
 
-Physical design engineers using Synopsys tools (IC Compiler II, Design Compiler, etc.) spend thousands of hours digging through dense documentation to find the exact Tcl command syntax for complex routines. General-purpose LLMs hallucinate these commands because the manuals are proprietary. 
+Physical design engineers using CAD tools (e.g., Synopsys IC Compiler II, Design Compiler, etc.) spend thousands of hours digging through dense documentation to find the exact command syntax for complex routines. General-purpose LLMs hallucinate these commands because the manuals are proprietary. 
 
 **EDA Coder solves this through a two-stage hybrid approach:**
-1. **QLoRA Fine-Tuning (SFT):** We fine-tuned a base code model (`deepseek-coder-7b-base`) on a synthetic dataset extracted directly from the manuals to teach it Synopsys idioms.
-2. **Retrieval-Augmented Generation (RAG):** At inference time, the user's query searches a massive local vector database of 23,000+ manual chunks. The retrieved context is injected into the LLM's prompt, guaranteeing perfect syntax and removing hallucinations.
+1. **QLoRA Fine-Tuning (SFT):** We fine-tuned a base code model (`deepseek-coder-7b-base`) on a synthetic dataset extracted directly from the manuals to teach it the specific CAD idioms.
+2. **Retrieval-Augmented Generation (RAG):** At inference time, the user's query searches a massive local vector database of manual chunks. The retrieved context is injected into the LLM's prompt, guaranteeing perfect syntax and removing hallucinations.
+
+While this pipeline can ingest any CAD tool manual and generate its respective command language, we use **Synopsys Tcl** in this repository as our primary evaluation example.
 
 ---
 
@@ -65,7 +67,7 @@ RAG_EDA/
 ├── eval/                     # Benchmarking & Ablation
 │   ├── run_missing_benchmark.py
 │   └── stress_test_suite.py
-├── tcl_inference.py          # Core Interactive Copilot UI
+├── inference.py              # Core Interactive CAD Copilot UI
 ├── rag_retriever.py          # ChromaDB Context Retriever
 └── docs_and_paper/           # VLSID 2027 Paper & Roadmaps
 ```
@@ -133,10 +135,10 @@ python stress_test_suite.py
 ## 📜 Key Design Decisions
 
 - **Docling for PDF Parsing:** Standard PDF parsers destroy code blocks and tables. `docling` reconstructs them perfectly using layout analysis.
-- **Header-Level Chunking:** Standard token-based chunking splits Tcl scripts in half. We split purely on Markdown headers (`#`, `##`) to preserve code integrity.
+- **Header-Level Chunking:** Standard token-based chunking splits commands in half. We split purely on Markdown headers (`#`, `##`) to preserve code integrity.
 - **`bge-small-en-v1.5` Embeddings:** Highly optimized for asymmetric retrieval (short questions matching against long manual pages).
 - **Ollama GGUF backend:** Running a 7B parameter model in FP16 takes 14GB of VRAM. By quantizing to 4-bit (`Q4_K_M`) and running via Ollama, we can deploy the final RAG pipeline on standard lab machines with minimal hardware overhead.
 
 ---
 
-> **Note:** The Synopsys PDF manuals and the resulting dataset are proprietary and cannot be open-sourced. This repository contains the framework and code necessary to build the pipeline on your own proprietary hardware documentation.
+> **Note:** The CAD PDF manuals and the resulting dataset are proprietary and cannot be open-sourced. This repository contains the framework and code necessary to build the pipeline on your own proprietary hardware documentation.

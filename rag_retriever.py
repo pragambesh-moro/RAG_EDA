@@ -2,7 +2,7 @@ import os
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
 
-class TclRagRetriever:
+class CadRagRetriever:
     def __init__(self, db_dir: str = "./chroma_db"):
         print("Loading BAAI/bge-small-en-v1.5 Embeddings...")
         # Re-initialize the same embedding model
@@ -19,10 +19,10 @@ class TclRagRetriever:
         self.vectorstore = Chroma(
             persist_directory=db_dir,
             embedding_function=self.embeddings,
-            collection_name="synopsys_commands"
+            collection_name="cad_commands"
         )
         
-    def retrieve_tcl_context(self, query: str, top_k: int = 3) -> str:
+    def retrieve_context(self, query: str, top_k: int = 3) -> str:
         """
         Takes a plain-English query, searches the Vector DB, and 
         returns the top_k most relevant markdown chunks formatted as context.
@@ -84,7 +84,7 @@ class TclRagRetriever:
         return "\n".join(context_blocks)
 
 if __name__ == "__main__":
-    retriever = TclRagRetriever()
+    retriever = CadRagRetriever()
     
     print("\n" + "="*50)
     print("TESTING RETRIEVAL PIPELINE")
@@ -93,7 +93,7 @@ if __name__ == "__main__":
     test_query = "How do I create a floorplan with 0.7 core utilization?"
     print(f"\nQUERY: '{test_query}'\n")
     
-    retrieved_context = retriever.retrieve_tcl_context(test_query, top_k=3)
+    retrieved_context = retriever.retrieve_context(test_query, top_k=3)
     
     print("RETRIEVED CONTEXT (This is what the LLM will see):\n")
     print(retrieved_context)

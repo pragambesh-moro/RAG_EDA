@@ -1,18 +1,18 @@
 """
-tcl_inference.py — The Final RAG + SFT Application via Ollama
+inference.py — The Final RAG + SFT Application via Ollama
 
-This script takes a plain-English physical design query, searches the Synopsys 
+This script takes a plain-English physical design query, searches the CAD tool 
 manuals in ChromaDB for context, and asks the local Ollama model to generate 
-the exact Tcl command.
+the exact CAD tool command.
 
 Usage:
-    python tcl_inference.py
+    python inference.py
 """
 
 import os
 import requests
 import json
-from rag_retriever import TclRagRetriever
+from rag_retriever import CadRagRetriever
 
 MODEL_NAME = "eda-coder"
 
@@ -27,7 +27,7 @@ def print_banner():
 ██╔══╝  ██║  ██║██╔══██║     ██║     ██║   ██║██║  ██║██╔══╝  ██╔══██╗
 ███████╗██████╔╝██║  ██║     ╚██████╗╚██████╔╝██████╔╝███████╗██║  ██║
 ╚══════╝╚═════╝ ╚═╝  ╚═╝      ╚═════╝ ╚═════╝ ╚═════╝ ╚══════╝╚═╝  ╚═╝
-{G}           v1.0.0 - Air-Gapped Tcl Generation Pipeline{R}
+{G}      v1.0.0 - Air-Gapped CAD Command Generation Pipeline{R}
 """
     print(banner)
 
@@ -35,7 +35,7 @@ def generate_with_ollama(prompt: str) -> str:
     url = "http://localhost:11434/api/generate"
     payload = {
         "model": MODEL_NAME,
-        "system": "You are an expert Synopsys EDA physical design assistant. You must output ONLY the precise Tcl command requested based on the provided context. If the requested command, tool, or flag is NOT explicitly supported or found in the provided manual context, you MUST refuse by stating: 'I cannot find this in the manual.' Do not invent or guess commands. Do not provide explanations, markdown formatting, or preamble.",
+        "system": "You are an expert EDA physical design assistant. You must output ONLY the precise command requested based on the provided CAD tool manual context. If the requested command, tool, or flag is NOT explicitly supported or found in the provided manual context, you MUST refuse by stating: 'I cannot find this in the manual.' Do not invent or guess commands. Do not provide explanations, markdown formatting, or preamble.",
         "prompt": prompt,
         "stream": False,
         "options": {
@@ -62,7 +62,7 @@ def build_rag_prompt(instruction: str, context: str) -> str:
     The Ollama Modelfile handles the '### Instruction:' formatting.
     """
     return (
-        "Use the following Synopsys manual extracts to formulate your command.\n\n"
+        "Use the following CAD manual extracts to formulate your command.\n\n"
         f"---\n{context}\n---\n\n"
         f"Query: {instruction}\n"
     )
@@ -78,7 +78,7 @@ def main():
     print("=" * 60 + "\n")
     
     # 1. Spin up the Vector DB
-    retriever = TclRagRetriever()
+    retriever = CadRagRetriever()
     
     # Check if Ollama is running
     try:
@@ -96,12 +96,12 @@ def main():
         if user_intent.strip().lower() in ['quit', 'exit', 'q']:
             break
             
-        print("\n[1/2] Retrieving Synopsys Manual Context...")
-        context = retriever.retrieve_tcl_context(user_intent, top_k=5)
+        print("\n[1/2] Retrieving CAD Manual Context...")
+        context = retriever.retrieve_context(user_intent, top_k=5)
         
         prompt = build_rag_prompt(user_intent, context)
         
-        print(f"[2/2] Generating Tcl Command via Ollama ({MODEL_NAME})...")
+        print(f"[2/2] Generating Command via Ollama ({MODEL_NAME})...")
         response = generate_with_ollama(prompt)
         
         print("\n>>> GENERATED COMMAND:")
