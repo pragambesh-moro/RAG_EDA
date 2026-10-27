@@ -142,3 +142,4 @@ python stress_test_suite.py
 ---
 
 > **Note:** The CAD PDF manuals and the resulting dataset are proprietary and cannot be open-sourced. This repository contains the framework and code necessary to build the pipeline on your own proprietary hardware documentation.
+> **Note:** This work has been accepted for presentation at VLSID 2027. The intellectual property associated with this work belongs to the authors and Shiv Nadar Institution of Eminence (SNIoE), subject to applicable publication agreements and institutional policies. Please do not reproduce, redistribute, or reuse this work without appropriate authorization and attribution.
